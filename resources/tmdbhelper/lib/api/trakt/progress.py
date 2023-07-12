@@ -201,14 +201,17 @@ class _TraktProgress():
 
     @is_authorized
     def _get_upnext_episodes_list(self, sort_by=None, sort_how='desc'):
-        def _get_upnext_episodes(i, get_single_episode=True):
+        def _get_upnext_episodes(i, get_single_episode=False):
             """ Helper func for upnext episodes to pass through threaded """
             try:
                 show = i['show']
                 slug = show['ids']['slug']
             except (AttributeError, KeyError):
                 return
-            return self.get_upnext_episodes(slug, show, get_single_episode=get_single_episode)
+            item = self.get_upnext_episodes(slug, show, get_single_episode=get_single_episode)
+            if get_single_episode:
+                return item
+            return next(item)
         shows = self._get_inprogress_shows() or []
 
         # Get upnext episodes threaded
@@ -275,11 +278,11 @@ class _TraktProgress():
         if response.get('reset_at'):
             reset_at = convert_timestamp(response['reset_at'])
         # Get next episode items
-        return [
+        return (
             {'show': show, 'episode': {'number': episode.get('number'), 'season': season.get('number')}}
             for season in response.get('seasons', []) for episode in season.get('episodes', [])
             if not episode.get('completed')
-            or (reset_at and convert_timestamp(episode.get('last_watched_at')) < reset_at)]
+            or (reset_at and convert_timestamp(episode.get('last_watched_at')) < reset_at))
 
     @is_authorized
     def get_movie_playcount(self, unique_id, id_type):
