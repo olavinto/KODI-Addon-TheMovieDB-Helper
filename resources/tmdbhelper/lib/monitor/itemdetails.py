@@ -8,23 +8,42 @@ from collections import namedtuple
 from copy import deepcopy
 
 
-BASEITEM_PROPERTIES = [
+BASEITEM_DEFAULT_PROPERTIES = [
     ('base_label', ('label',), None),
     ('base_title', ('title',), None),
     ('base_icon', ('icon',), None),
-    ('base_plot', ('plot', 'Property(artist_description)', 'Property(album_description)', 'addondescription'), None),
-    ('base_tagline', ('tagline',), None),
     ('base_dbtype', ('dbtype',), None),
-    ('base_rating', ('userrating', 'rating',), None),
-    ('base_poster', ('Art(poster)', 'Art(season.poster)', 'Art(tvshow.poster)'), None),
-    ('base_fanart', ('Art(fanart)', 'Art(season.fanart)', 'Art(tvshow.fanart)'), None),
-    ('base_clearlogo', ('Art(clearlogo)', 'Art(tvshow.clearlogo)', 'Art(artist.clearlogo)'), None),
-    ('base_tvshowtitle', ('tvshowtitle',), None),
-    ('base_studio', ('studio',), lambda v: v.split(' / ')[0] if v else None),
-    ('base_genre', ('genre',), lambda v: v.split(' / ')[0] if v else None),
-    ('base_director', ('director',), lambda v: v.split(' / ')[0] if v else None),
-    ('base_writer', ('writer',), lambda v: v.split(' / ')[0] if v else None),
 ]
+
+BASEITEM_FUNCTIONS = {
+    'split': lambda v: v.split(' / ')[0]
+}
+
+
+def get_skin_baseitem_properties():
+    import json
+    import xbmcvfs
+    import contextlib
+
+    filepath = 'special://skin/extras/tmdbhelper/baseitem.json'
+
+    with contextlib.suppress(IOError, json.JSONDecodeError):
+        with xbmcvfs.File(filepath, 'r') as file:
+            response = json.load(file)
+
+    if not response:
+        return []
+
+    def get_item_tuple(k, v):
+        key = f'base_{k}'
+        values = v.get('infolabels') or []
+        function = BASEITEM_FUNCTIONS.get(v.get('function'))
+        return (key, values, function,)
+
+    return [get_item_tuple(k, v) for k, v in response.items()]
+
+
+BASEITEM_PROPERTIES = get_skin_baseitem_properties() + BASEITEM_DEFAULT_PROPERTIES
 
 CV_USE_MULTI_TYPE = ""\
     "Window.IsVisible(DialogPVRInfo.xml) | "\
