@@ -27,6 +27,7 @@ class BaseItemProperties(dict):
 
         filepath = 'special://skin/extras/tmdbhelper/baseitem.json'
 
+        response = None
         with contextlib.suppress(IOError, json.JSONDecodeError):
             with xbmcvfs.File(filepath, 'r') as file:
                 response = json.load(file)
