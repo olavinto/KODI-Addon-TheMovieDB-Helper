@@ -246,8 +246,6 @@ class ListItemMonitor(CommonMonitorFunctions):
             _listitem.setArt(_detailed['artwork'] or {}) if process_artwork else None
             _listitem.setProperties(_detailed['ratings'] or {}) if process_ratings else None
 
-        self.set_base_properties(_item._itemdetails.listitem)
-
         if process_artwork or process_ratings:
             t = Thread(target=_process_artwork_ratings)
             t.start()
