@@ -237,18 +237,23 @@ class CommonMonitorFunctions(CommonMonitorDetails):
         get_property(key, set_property=f'{value}')
 
     @kodi_try_except('lib.monitor.common set_iter_properties')
-    def set_iter_properties(self, dictionary: dict, keys: set):
+    def set_iter_properties(self, dictionary: dict, keys: set, property_object=None):
         """ Interates through a set of keys and adds corresponding value from the dictionary as a window property
         Lists of values from dictionary are joined with ' / '.join(dictionary[key])
         TMDbHelper.ListItem.{key} = dictionary[key]
         """
         if not isinstance(dictionary, dict):
             dictionary = {}
+
+        if property_object is None:
+            property_object = set()
+
         for k in keys:
             v = dictionary.get(k)
             if isinstance(v, list):
                 v = ' / '.join(v)
             self.properties.add(k)
+            property_object.add(k)
             self.set_property(k, v)
 
     @kodi_try_except('lib.monitor.common set_indexed_properties')
