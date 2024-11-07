@@ -407,13 +407,14 @@ class ListItemMonitor(CommonMonitorFunctions):
         if self._listcontainer:
             self.add_item_listcontainer(ListItem().get_listitem())
 
+        ignore_keys = set()
+
         try:
             if keep_tv_details and self._item._dbtype in ['episodes', 'seasons']:
-                ignore_keys = set()
                 ignore_keys.update(SETMAIN_ARTWORK)
                 ignore_keys.update(SETPROP_RATINGS)
         except AttributeError:
-            ignore_keys = None
+            ignore_keys = set()
 
         self.clear_properties(ignore_keys=ignore_keys)
         self.blur_fallback()
