@@ -396,9 +396,10 @@ class ListItemMonitor(CommonMonitorFunctions):
         self.setup_current_container()
         if self.is_same_item():
             return
-        if self._listcontainer:
+        # if self._listcontainer:
+        #     return self.on_listitem()
+        if self._readahead_li:
             return self.on_listitem()
-        # return self.on_listitem()
         # return self.on_exit(keep_tv_details=True)
 
     def on_exit(self, keep_tv_details=False, is_done=True):
