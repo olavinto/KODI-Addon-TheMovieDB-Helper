@@ -265,7 +265,7 @@ class ListItemMonitor(CommonMonitorFunctions):
         # Proces artwork in a thread
         def _process_artwork():
             _artwork = _item.get_builtartwork()
-            _artwork.update(_item.get_image_manipulations(built_artwork=_artwork))
+            _artwork.update(_item.get_image_manipulations(built_artwork=_artwork, use_winprops=True))
             _artwork_properties = set()
             if self.is_same_item():
                 self.set_iter_properties(_artwork, SETMAIN_ARTWORK, property_object=_artwork_properties)
