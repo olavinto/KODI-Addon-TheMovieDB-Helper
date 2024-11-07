@@ -42,7 +42,7 @@ class ListItemMonitor(CommonMonitorFunctions):
         self._readahead = None
         self._item = None
         self.property_prefix = 'ListItem'
-        self._clearfunc_wp = {'func': self.on_exit, 'keep_tv_artwork': True, 'is_done': False}
+        self._clearfunc_wp = {'func': None}  # {'func': self.on_exit, 'keep_tv_details': True, 'is_done': False}
         self._clearfunc_lc = {'func': None}
         self._readahead_li = get_setting('service_listitem_readahead')  # Allows readahead queue of next ListItems when idle
         self._pre_artwork_thread = None
@@ -257,7 +257,7 @@ class ListItemMonitor(CommonMonitorFunctions):
 
         # Item changed so reset properties
         # if not self.is_same_item():
-        #     return self.on_exit(keep_tv_artwork=True)
+        #     return self.on_exit(keep_tv_details=True)
 
         if not self.is_same_item():
             return
@@ -399,17 +399,23 @@ class ListItemMonitor(CommonMonitorFunctions):
         if self._listcontainer:
             return self.on_listitem()
         # return self.on_listitem()
-        # return self.on_exit(keep_tv_artwork=True)
+        # return self.on_exit(keep_tv_details=True)
 
-    def on_exit(self, keep_tv_artwork=False, is_done=True):
+    def on_exit(self, keep_tv_details=False, is_done=True):
+
         if self._listcontainer:
             self.add_item_listcontainer(ListItem().get_listitem())
-            self.clear_properties()
-            self.blur_fallback()
-            return
+
         try:
-            ignore_keys = SETMAIN_ARTWORK if keep_tv_artwork and self._item._dbtype in ['episodes', 'seasons'] else None
+            if keep_tv_details and self._item._dbtype in ['episodes', 'seasons']:
+                ignore_keys = set()
+                ignore_keys.update(SETMAIN_ARTWORK)
+                ignore_keys.update(SETPROP_RATINGS)
         except AttributeError:
             ignore_keys = None
+
         self.clear_properties(ignore_keys=ignore_keys)
-        get_property('IsUpdating', clear_property=True) if is_done else None
+        self.blur_fallback()
+
+        if is_done:
+            get_property('IsUpdating', clear_property=True)
