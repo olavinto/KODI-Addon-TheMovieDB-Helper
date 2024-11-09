@@ -8,6 +8,7 @@ from tmdbhelper.lib.monitor.itemdetails import ListItemDetails
 from tmdbhelper.lib.monitor.readahead import ListItemReadAhead, READAHEAD_CHANGED
 from tmdbhelper.lib.items.listitem import ListItem
 from tmdbhelper.lib.files.bcache import BasicCache
+from jurialmunkey.parser import merge_two_items
 from threading import Thread
 
 CV_USE_LISTITEM = ""\
@@ -253,7 +254,7 @@ class ListItemMonitor(CommonMonitorFunctions):
     def on_finalise_winproperties(self, process_artwork=True, process_ratings=True):
         _item = self._item
         _item.get_additional_properties()
-        _item.get_nextaired()
+        # _item.get_nextaired()
 
         # Item changed so reset properties
         # if not self.is_same_item():
@@ -271,23 +272,32 @@ class ListItemMonitor(CommonMonitorFunctions):
                 self.set_iter_properties(_artwork, SETMAIN_ARTWORK, property_object=_artwork_properties)
                 self.clear_property_list(SETMAIN_ARTWORK.difference(_artwork_properties))
 
-        if process_artwork:
-            thread_artwork = Thread(target=_process_artwork)
-            thread_artwork.start()
-
         # Process ratings in a thread
         def _process_ratings():
-            get_property('IsUpdatingRatings', 'True')
             _details = _item.get_all_ratings() or {}
             _ratings_properties = set()
             if self.is_same_item():
                 self.set_iter_properties(_details.get('infoproperties', {}), SETPROP_RATINGS, property_object=_ratings_properties)
                 self.clear_property_list(SETPROP_RATINGS.difference(_ratings_properties))
+
+        def _process_artwork_ratings():
+            get_property('IsUpdatingRatings', 'True')
+
+            # Thread ratings and artwork processing
+            t_artwork = Thread(target=_process_artwork) if process_artwork else None
+            t_ratings = Thread(target=_process_ratings) if process_ratings else None
+            t_artwork.start() if t_artwork else None
+            t_ratings.start() if t_ratings else None
+
+            # Wait for threads to join before readding listitem
+            t_artwork.join() if t_artwork else None
+            t_ratings.join() if t_ratings else None
+
             get_property('IsUpdatingRatings', clear_property=True)
 
-        if process_ratings:
-            thread_ratings = Thread(target=_process_ratings)
-            thread_ratings.start()
+        if process_artwork or process_ratings:
+            t = Thread(target=_process_artwork_ratings)
+            t.start()
 
         # Copy previous properties for clearing intersection
         prev_properties = self.properties.copy()
@@ -360,12 +370,12 @@ class ListItemMonitor(CommonMonitorFunctions):
         self.setup_current_item()
 
         # Thread image functions to prevent blocking details lookup
-        if not self._listcontainer:
-            Thread(target=self._item.get_image_manipulations, kwargs={'use_winprops': True}).start()
+        # if not self._listcontainer:
+        #     Thread(target=self._item.get_image_manipulations, kwargs={'use_winprops': True}).start()
 
         # Allow early exit if the skin only needs image manipulations
-        if get_condvisibility("!Skin.HasSetting(TMDbHelper.Service)"):
-            return get_property('IsUpdating', clear_property=True)
+        # if get_condvisibility("!Skin.HasSetting(TMDbHelper.Service)"):
+        #     return get_property('IsUpdating', clear_property=True)
 
         # Get item details
         uncached_func = self._clearfunc_lc if self._listcontainer else self._clearfunc_wp
