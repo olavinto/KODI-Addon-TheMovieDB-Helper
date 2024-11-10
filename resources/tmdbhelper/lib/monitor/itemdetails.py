@@ -1,53 +1,10 @@
-from tmdbhelper.lib.addon.plugin import get_condvisibility, get_infolabel, convert_media_type, convert_type, get_setting, get_skindir
+from tmdbhelper.lib.addon.plugin import get_condvisibility, get_infolabel, convert_media_type, convert_type, get_setting
 from tmdbhelper.lib.addon.tmdate import convert_timestamp, get_region_date
 from tmdbhelper.lib.monitor.images import ImageManipulations
 from tmdbhelper.lib.items.listitem import ListItem
 from tmdbhelper.lib.api.mapping import get_empty_item
 from collections import namedtuple
 from copy import deepcopy
-
-
-class BaseItemProperties(dict):
-    baseitem_default_properties = [
-        ('base_label', ('label',), None),
-        ('base_title', ('title',), None),
-        ('base_icon', ('icon',), None),
-        ('base_dbtype', ('dbtype',), None),
-    ]
-
-    baseitem_functions = {
-        'split': lambda v: v.split(' / ')[0]
-    }
-
-    def get_skin_baseitem_properties(self):
-        import json
-        import xbmcvfs
-        import contextlib
-
-        filepath = 'special://skin/extras/tmdbhelper/baseitem.json'
-
-        response = None
-        with contextlib.suppress(IOError, json.JSONDecodeError):
-            with xbmcvfs.File(filepath, 'r') as file:
-                response = json.load(file)
-
-        if not response:
-            return []
-
-        def get_item_tuple(k, v):
-            key = f'base_{k}'
-            values = v.get('infolabels') or []
-            function = self.baseitem_functions.get(v.get('function'))
-            return (key, values, function,)
-
-        return [get_item_tuple(k, v) for k, v in response.items()]
-
-    def __missing__(self, key):
-        self[key] = self.get_skin_baseitem_properties() + self.baseitem_default_properties
-        return self[key]
-
-
-BASEITEM_PROPERTIES = BaseItemProperties()
 
 
 CV_USE_MULTI_TYPE = ""\
@@ -189,18 +146,15 @@ class ListItemDetails(ImageManipulations):
             return self._itemdetails.listitem
         return self._parent.get_nextaired(self._itemdetails.listitem, self._itemdetails.tmdb_type, self._itemdetails.tmdb_id)
 
-    def get_additional_properties(self):
+    def get_additional_properties(self, infoproperties=None):
         if not self._itemdetails:
             return
         self._itemdetails.listitem['folderpath'] = self._itemdetails.listitem['infoproperties']['folderpath'] = self.get_infolabel('folderpath')
         self._itemdetails.listitem['filenameandpath'] = self._itemdetails.listitem['infoproperties']['filenameandpath'] = self.get_infolabel('filenameandpath')
-        for k, v, f in BASEITEM_PROPERTIES[get_skindir()]:
-            try:
-                value = next(j for j in (self.get_infolabel(i) for i in v) if j)
-                value = f(value) if f else value
-                self._itemdetails.listitem['infoproperties'][k] = value
-            except StopIteration:
-                self._itemdetails.listitem['infoproperties'][k] = None
+        if not infoproperties:
+            return
+        for k, v in infoproperties.items():
+            self._itemdetails.listitem['infoproperties'][k] = v
 
     def get_itemtypeid(self, tmdb_type):
         li_year = self._year if tmdb_type == 'movie' else None

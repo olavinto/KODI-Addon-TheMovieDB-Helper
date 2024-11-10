@@ -1,10 +1,11 @@
 import xbmcgui
-from tmdbhelper.lib.addon.plugin import get_infolabel, get_condvisibility, get_localized, get_setting
+from tmdbhelper.lib.addon.plugin import get_infolabel, get_condvisibility, get_localized, get_setting, get_skindir
 from tmdbhelper.lib.addon.logger import kodi_try_except
 from jurialmunkey.window import get_property, get_current_window
 from tmdbhelper.lib.monitor.common import CommonMonitorFunctions, SETMAIN_ARTWORK, SETPROP_RATINGS
 from tmdbhelper.lib.monitor.itemdetails import ListItemDetails
 from tmdbhelper.lib.monitor.readahead import ListItemReadAhead, READAHEAD_CHANGED
+from tmdbhelper.lib.monitor.baseitem import BaseItemSkinDefaults
 from tmdbhelper.lib.items.listitem import ListItem
 from tmdbhelper.lib.files.bcache import BasicCache
 from threading import Thread
@@ -40,6 +41,28 @@ class ListItemInfoGetter():
             self.get_infolabel('season', position),
             self.get_infolabel('episode', position),))
 
+    @property
+    def cur_item(self):
+        return self.get_item_identifier()
+
+    @property
+    def cur_window(self):
+        return get_current_window()
+
+    @property
+    def widget_id(self):
+        window_id = self.cur_window if get_condvisibility(CV_USE_LOCAL_CONTAINER) else None
+        return get_property('WidgetContainer', window_id=window_id, is_type=int)
+
+    @property
+    def container(self):
+        widget_id = self.widget_id
+        return f'Container({widget_id}).' if widget_id else 'Container.'
+
+    @property
+    def container_item(self):
+        return 'ListItem.' if get_condvisibility(CV_USE_LISTITEM) else f'{self.container}ListItem({{}}).'
+
 
 class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
     def __init__(self):
@@ -61,6 +84,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
         self._clearfunc_lc = {'func': None}
         self._readahead_li = get_setting('service_listitem_readahead')  # Allows readahead queue of next ListItems when idle
         self._pre_artwork_thread = None
+        self._baseitem_skindefaults = BaseItemSkinDefaults()
 
     # ==========
     # PROPERTIES
@@ -73,10 +97,6 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
     @property
     def cur_folder(self):
         return str(('current_folder', self._container, self.container_content, self.numitems,))
-
-    @property
-    def cur_item(self):
-        return self.get_item_identifier()
 
     @property
     def container_content(self):
@@ -106,6 +126,18 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
     @property
     def numitems(self):
         return get_infolabel(f'{self._container}NumItems')
+
+    @property
+    def baseitem_properties(self):
+        infoproperties = {}
+        for k, v, f in self._baseitem_skindefaults[get_skindir()]:
+            try:
+                value = next(j for j in (self.get_infolabel(i) for i in v) if j)
+                value = f(value) if f else value
+                infoproperties[k] = value
+            except StopIteration:
+                infoproperties[k] = None
+        return infoproperties
 
     # =======
     # GETTERS
@@ -191,7 +223,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
         Processing of artwork and ratings is done in a background thread to avoid locking main loop
         """
         _item = self._item
-        _item.get_additional_properties()
+        _item.get_additional_properties(self.baseitem_properties)
         _listitem = self._last_listitem = _item.get_builtitem()
         _pre_item = self._pre_item
         _detailed = {'artwork': None, 'ratings': None}
@@ -241,7 +273,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
 
     def on_finalise_winproperties(self, process_artwork=True, process_ratings=True):
         _item = self._item
-        _item.get_additional_properties()
+        _item.get_additional_properties(self.baseitem_properties)
         # _item.get_nextaired()
 
         # Item changed so reset properties

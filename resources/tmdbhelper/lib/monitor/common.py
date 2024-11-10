@@ -226,12 +226,10 @@ class CommonMonitorFunctions(CommonMonitorDetails):
         self.property_prefix = 'ListItem'
         super(CommonMonitorFunctions, self).__init__()
 
-    @kodi_try_except('lib.monitor.common clear_property')
     def clear_property(self, key):
         key = f'{self.property_prefix}.{key}'
         get_property(key, clear_property=True)
 
-    @kodi_try_except('lib.monitor.common set_property')
     def set_property(self, key, value):
         key = f'{self.property_prefix}.{key}'
         if value is None:
