@@ -256,7 +256,9 @@ class CommonMonitorFunctions(PropertySetter, CommonMonitorDetails):
             property_object = set()
 
         for k in keys:
-            v = dictionary.get(k)
+            if k not in dictionary:
+                continue
+            v = dictionary[k]
             if v is None:
                 continue
             if isinstance(v, list):
@@ -281,7 +283,9 @@ class CommonMonitorFunctions(PropertySetter, CommonMonitorDetails):
                 and k not in SETMAIN_ARTWORK)
 
             for k in keys:
-                v = dictionary.get(k)
+                if k not in dictionary:
+                    continue
+                v = dictionary[k]
                 if v is None:
                     continue
                 self.set_property(k, v)
