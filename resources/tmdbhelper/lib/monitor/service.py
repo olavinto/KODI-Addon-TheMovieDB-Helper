@@ -56,7 +56,6 @@ class ServiceMonitor(Poller):
         """
         if self.listitem_funcs.properties or self.listitem_funcs.index_properties:
             return self.listitem_funcs.clear_properties()
-        self.listitem_funcs.blur_fallback()
         self._on_idle(1)
 
     def _on_exit(self):
