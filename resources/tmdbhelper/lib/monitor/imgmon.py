@@ -1,7 +1,7 @@
 from tmdbhelper.lib.monitor.images import ImageManipulations
 from tmdbhelper.lib.monitor.poller import Poller
 from tmdbhelper.lib.monitor.listitemtools import ListItemInfoGetter
-from tmdbhelper.lib.addon.plugin import get_setting
+# from tmdbhelper.lib.addon.plugin import get_setting
 from threading import Thread
 
 
@@ -13,7 +13,7 @@ class ImagesMonitor(Thread, ListItemInfoGetter, ImageManipulations, Poller):
         self.crop_image_cur = None
         self.blur_image_cur = None
         self.pre_item = None
-        self._readahead_li = get_setting('service_listitem_readahead')  # Allows readahead queue of next ListItems when idle
+        self._readahead_li = True  # get_setting('service_listitem_readahead')  # Allows readahead queue of next ListItems when idle
 
     def setup_current_container(self):
         self._container_item = self.container_item
