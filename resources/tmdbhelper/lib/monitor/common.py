@@ -13,7 +13,10 @@ import json
 SETMAIN = {
     'label', 'tmdb_id', 'imdb_id', 'folderpath', 'filenameandpath'}
 SETMAIN_ARTWORK = {
-    'icon', 'poster', 'thumb', 'fanart', 'discart', 'clearart', 'clearlogo', 'landscape', 'banner', 'keyart'}
+    'cropimage', 'cropimage.original', 'blurimage', 'blurimage.original', 'desaturateimage', 'desaturateimage.original', 'colorsimage', 'colorsimage.original',
+    'icon', 'poster', 'thumb', 'fanart', 'discart', 'clearart', 'clearlogo', 'landscape', 'banner', 'keyart',
+    'season.poster', 'season.thumb', 'season.fanart', 'season.discart', 'season.clearart', 'season.clearlogo', 'season.landscape', 'season.banner', 'season.keyart',
+    'tvshow.poster', 'tvshow.thumb', 'tvshow.fanart', 'tvshow.discart', 'tvshow.clearart', 'tvshow.clearlogo', 'tvshow.landscape', 'tvshow.banner', 'tvshow.keyart'}
 SETINFO = {
     'title', 'originaltitle', 'tvshowtitle', 'plot', 'rating', 'votes', 'premiered', 'year',
     'imdbnumber', 'tagline', 'status', 'episode', 'season', 'genre', 'set', 'studio', 'country',

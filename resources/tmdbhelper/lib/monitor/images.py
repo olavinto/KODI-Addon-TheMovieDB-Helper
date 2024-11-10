@@ -5,12 +5,20 @@ import colorsys
 import hashlib
 from xbmc import getCacheThumbName, skinHasImage, Monitor, sleep
 from jurialmunkey.window import get_property
-from tmdbhelper.lib.addon.plugin import get_infolabel, get_setting, ADDONDATA
+from tmdbhelper.lib.addon.plugin import get_infolabel, get_setting, get_condvisibility, ADDONDATA
 from jurialmunkey.parser import try_int, try_float
 from tmdbhelper.lib.files.futils import make_path
 from threading import Thread
 import urllib.request as urllib
 from tmdbhelper.lib.addon.logger import kodi_log
+
+CROPIMAGE_SOURCE = "Art(artist.clearlogo)|Art(tvshow.clearlogo)|Art(clearlogo)"
+
+ARTWORK_LOOKUP_TABLE = {
+    'poster': ['Art(tvshow.poster)', 'Art(poster)', 'Art(thumb)'],
+    'fanart': ['Art(fanart)', 'Art(thumb)'],
+    'landscape': ['Art(landscape)', 'Art(fanart)', 'Art(thumb)'],
+    'thumb': ['Art(thumb)']}
 
 # PIL causes issues (via numpy) on Linux systems using python versions higher than 3.8.5
 # Lazy import PIL to avoid using it unless user requires ImageFunctions
@@ -340,3 +348,102 @@ class ImageFunctions(Thread):
         except Exception as exc:
             kodi_log(exc, 1)
             return ''
+
+
+class ImageManipulations():
+    def get_infolabel(self, info):
+        return get_infolabel(f'ListItem.{info}')
+
+    def get_builtartwork(self):
+        return
+
+    def get_artwork(self, source='', build_fallback=False, built_artwork=None):
+        source = source or ''
+        source = source.lower()
+
+        def _get_artwork_infolabel(_infolabels):
+            for i in _infolabels:
+                artwork = self.get_infolabel(i)
+                if not artwork:
+                    continue
+                return artwork
+
+        def _get_artwork_fallback(_infolabels, _built_artwork):
+            for i in _infolabels:
+                if not i.startswith('art('):
+                    continue
+                artwork = _built_artwork.get(i[4:-1])
+                if not artwork:
+                    continue
+                return artwork
+
+        def _get_artwork(_source):
+            if _source:
+                _infolabels = ARTWORK_LOOKUP_TABLE.get(_source, _source.split("|"))
+            else:
+                _infolabels = ARTWORK_LOOKUP_TABLE.get('thumb')
+
+            artwork = _get_artwork_infolabel(_infolabels)
+
+            if artwork or not build_fallback:
+                return artwork
+
+            nonlocal built_artwork
+
+            built_artwork = built_artwork or self.get_builtartwork()
+            if not built_artwork:
+                return
+
+            return _get_artwork_fallback(_infolabels, built_artwork)
+
+        for _source in source.split("||"):
+            artwork = _get_artwork(_source)
+            if not artwork:
+                continue
+            return artwork
+
+    def get_image_manipulations(self, use_winprops=False, built_artwork=None):
+        images = {}
+
+        _manipulations = (
+            {'method': 'crop',
+                'active': lambda: get_condvisibility("Skin.HasSetting(TMDbHelper.EnableCrop)"),
+                'images': lambda: self.get_artwork(
+                    source=CROPIMAGE_SOURCE,
+                    build_fallback=True,
+                    built_artwork=built_artwork)},
+            {'method': 'blur',
+                'active': lambda: get_condvisibility("Skin.HasSetting(TMDbHelper.EnableBlur)"),
+                'images': lambda: self.get_artwork(
+                    source=get_property('Blur.SourceImage'),
+                    build_fallback=True,
+                    built_artwork=built_artwork)
+                or get_property('Blur.Fallback')},
+            {'method': 'desaturate',
+                'active': lambda: get_condvisibility("Skin.HasSetting(TMDbHelper.EnableDesaturate)"),
+                'images': lambda: self.get_artwork(
+                    source=get_property('Desaturate.SourceImage'),
+                    build_fallback=True,
+                    built_artwork=built_artwork)
+                or get_property('Desaturate.Fallback')},
+            {'method': 'colors',
+                'active': lambda: get_condvisibility("Skin.HasSetting(TMDbHelper.EnableColors)"),
+                'images': lambda: self.get_artwork(
+                    source=get_property('Colors.SourceImage'),
+                    build_fallback=True,
+                    built_artwork=built_artwork)
+                or get_property('Colors.Fallback')},)
+
+        for i in _manipulations:
+            if not i['active']():
+                continue
+            imgfunc = ImageFunctions(method=i['method'], is_thread=False, artwork=i['images']())
+
+            output = imgfunc.func(imgfunc.image)
+            images[f'{i["method"]}image'] = output
+            images[f'{i["method"]}image.original'] = imgfunc.image
+
+            if use_winprops:
+                imgfunc.set_properties(output)
+
+        return images

@@ -3,39 +3,53 @@ from tmdbhelper.lib.addon.plugin import get_infolabel, get_condvisibility, get_l
 from tmdbhelper.lib.addon.logger import kodi_try_except
 from jurialmunkey.window import get_property, get_current_window
 from tmdbhelper.lib.monitor.common import CommonMonitorFunctions, SETMAIN_ARTWORK, SETPROP_RATINGS
-from tmdbhelper.lib.monitor.images import ImageFunctions
 from tmdbhelper.lib.monitor.itemdetails import ListItemDetails
 from tmdbhelper.lib.monitor.readahead import ListItemReadAhead, READAHEAD_CHANGED
 from tmdbhelper.lib.items.listitem import ListItem
 from tmdbhelper.lib.files.bcache import BasicCache
-from jurialmunkey.parser import merge_two_items
 from threading import Thread
 
-CV_USE_LISTITEM = ""\
-    "!Skin.HasSetting(TMDbHelper.ForceWidgetContainer) + "\
-    "!Window.IsActive(script-tmdbhelper-recommendations.xml) + ["\
-    "!Skin.HasSetting(TMDbHelper.UseLocalWidgetContainer) | String.IsEmpty(Window.Property(TMDbHelper.WidgetContainer))] + ["\
-    "Window.IsVisible(movieinformation) | "\
-    "Window.IsVisible(musicinformation) | "\
-    "Window.IsVisible(songinformation) | "\
-    "Window.IsVisible(addoninformation) | "\
-    "Window.IsVisible(pvrguideinfo) | "\
-    "Window.IsVisible(tvchannels) | "\
-    "Window.IsVisible(tvguide)]"
+CV_USE_LISTITEM = (
+    "!Skin.HasSetting(TMDbHelper.ForceWidgetContainer) + "
+    "!Window.IsActive(script-tmdbhelper-recommendations.xml) + ["
+    "!Skin.HasSetting(TMDbHelper.UseLocalWidgetContainer) | String.IsEmpty(Window.Property(TMDbHelper.WidgetContainer))] + ["
+    "Window.IsVisible(movieinformation) | "
+    "Window.IsVisible(musicinformation) | "
+    "Window.IsVisible(songinformation) | "
+    "Window.IsVisible(addoninformation) | "
+    "Window.IsVisible(pvrguideinfo) | "
+    "Window.IsVisible(tvchannels) | "
+    "Window.IsVisible(tvguide)]")
 
 CV_USE_LOCAL_CONTAINER = "Skin.HasSetting(TMDbHelper.UseLocalWidgetContainer)"
 
 
-class ListItemMonitor(CommonMonitorFunctions):
+class ListItemInfoGetter():
+    def get_infolabel(self, info, position=0):
+        return get_infolabel(f'{self._container_item.format(position)}{info}')
+
+    def get_item_identifier(self, position=0):
+        return str((
+            'current_listitem_v5.1.17',
+            self.get_infolabel('dbtype', position),
+            self.get_infolabel('dbid', position),
+            self.get_infolabel('IMDBNumber', position),
+            self.get_infolabel('title', position) or self.get_infolabel('label', position),
+            self.get_infolabel('tvshowtitle', position),
+            self.get_infolabel('year', position),
+            self.get_infolabel('season', position),
+            self.get_infolabel('episode', position),))
+
+
+class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
     def __init__(self):
-        super(ListItemMonitor, self).__init__()
+        super(ListItemMonitorFunctions, self).__init__()
         self._cur_item = 0
         self._pre_item = 1
         self._cur_folder = None
         self._pre_folder = None
         self._cur_window = 0
         self._pre_window = 1
-        self._last_blur_fallback = False
         self._cache = BasicCache(filename=f'QuickService.db')
         self._ignored_labels = ['..', get_localized(33078).lower(), get_localized(209).lower()]
         self._listcontainer = None
@@ -104,21 +118,6 @@ class ListItemMonitor(CommonMonitorFunctions):
             return -1
         return container_id
 
-    def get_infolabel(self, info, position=0):
-        return get_infolabel(f'{self._container_item.format(position)}{info}')
-
-    def get_item_identifier(self, position=0):
-        return str((
-            'current_listitem_v5.1.17',
-            self.get_infolabel('dbtype', position),
-            self.get_infolabel('dbid', position),
-            self.get_infolabel('IMDBNumber', position),
-            self.get_infolabel('title', position) or self.get_infolabel('label', position),
-            self.get_infolabel('tvshowtitle', position),
-            self.get_infolabel('year', position),
-            self.get_infolabel('season', position),
-            self.get_infolabel('episode', position),))
-
     # ================
     # SETUP PROPERTIES
     # ================
@@ -166,22 +165,9 @@ class ListItemMonitor(CommonMonitorFunctions):
     # =========
 
     def clear_properties(self, ignore_keys=None):
-        if not self._item or not self._item.get_artwork(source="Art(artist.clearlogo)|Art(tvshow.clearlogo)|Art(clearlogo)"):
-            self.properties.update({'CropImage', 'CropImage.Original'})
+        # if not self._item or not self._item.get_artwork(source="Art(artist.clearlogo)|Art(tvshow.clearlogo)|Art(clearlogo)"):
+        #     self.properties.update({'CropImage', 'CropImage.Original'})
         super().clear_properties(ignore_keys=ignore_keys)
-
-    @kodi_try_except('lib.monitor.listitem.blur_fallback')
-    def blur_fallback(self):
-        if self._last_blur_fallback:
-            return
-        fallback = get_property('Blur.Fallback')
-        if not fallback:
-            return
-        if get_condvisibility("Skin.HasSetting(TMDbHelper.EnableBlur)"):
-            self.blur_img = ImageFunctions(method='blur', artwork=fallback)
-            self.blur_img.setName('blur_img')
-            self.blur_img.start()
-            self._last_blur_fallback = True
 
     def add_item_listcontainer(self, listitem, window_id=None, container_id=None):
         try:
@@ -244,6 +230,8 @@ class ListItemMonitor(CommonMonitorFunctions):
             if _pre_item != self.cur_item:
                 return
 
+            self.images_monitor.pre_item = _pre_item
+
             _listitem.setArt(_detailed['artwork'] or {}) if process_artwork else None
             _listitem.setProperties(_detailed['ratings'] or {}) if process_ratings else None
 
@@ -266,9 +254,10 @@ class ListItemMonitor(CommonMonitorFunctions):
         # Proces artwork in a thread
         def _process_artwork():
             _artwork = _item.get_builtartwork()
-            _artwork.update(_item.get_image_manipulations(built_artwork=_artwork, use_winprops=True))
+            _artwork.update(_item.get_image_manipulations(built_artwork=_artwork, use_winprops=False))
             _artwork_properties = set()
             if self.is_same_item():
+                self.images_monitor.pre_item = self._cur_item
                 self.set_iter_properties(_artwork, SETMAIN_ARTWORK, property_object=_artwork_properties)
                 self.clear_property_list(SETMAIN_ARTWORK.difference(_artwork_properties))
 
@@ -427,7 +416,6 @@ class ListItemMonitor(CommonMonitorFunctions):
             ignore_keys = set()
 
         self.clear_properties(ignore_keys=ignore_keys)
-        self.blur_fallback()
 
         if is_done:
             get_property('IsUpdating', clear_property=True)
