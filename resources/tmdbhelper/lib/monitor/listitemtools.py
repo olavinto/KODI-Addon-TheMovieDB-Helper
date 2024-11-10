@@ -80,7 +80,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
         self._readahead = None
         self._item = None
         self.property_prefix = 'ListItem'
-        self._clearfunc_wp = {'func': None}  # {'func': self.on_exit, 'keep_tv_details': True, 'is_done': False}
+        self._clearfunc_wp = {'func': None}
         self._clearfunc_lc = {'func': None}
         self._readahead_li = get_setting('service_listitem_readahead')  # Allows readahead queue of next ListItems when idle
         self._pre_artwork_thread = None
@@ -197,8 +197,6 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
     # =========
 
     def clear_properties(self, ignore_keys=None):
-        # if not self._item or not self._item.get_artwork(source="Art(artist.clearlogo)|Art(tvshow.clearlogo)|Art(clearlogo)"):
-        #     self.properties.update({'CropImage', 'CropImage.Original'})
         super().clear_properties(ignore_keys=ignore_keys)
 
     def add_item_listcontainer(self, listitem, window_id=None, container_id=None):
@@ -274,11 +272,6 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
     def on_finalise_winproperties(self, process_artwork=True, process_ratings=True):
         _item = self._item
         _item.get_additional_properties(self.baseitem_properties)
-        # _item.get_nextaired()
-
-        # Item changed so reset properties
-        # if not self.is_same_item():
-        #     return self.on_exit(keep_tv_details=True)
 
         if not self.is_same_item():
             return
@@ -326,9 +319,6 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
 
         # Set our properties
         self.set_properties(_item._itemdetails.listitem, self.baseitem_properties)
-
-        # from tmdbhelper.lib.addon.logger import kodi_log
-        # kodi_log(f'set {len(self.properties)} & {len(self.index_properties)} properties for {self.properties}', 1)
 
         ignore_keys = prev_properties.intersection(self.properties)
         ignore_keys.update(SETPROP_RATINGS)
@@ -394,14 +384,6 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
         # Get the current listitem details for the details lookup
         self.setup_current_item()
 
-        # Thread image functions to prevent blocking details lookup
-        # if not self._listcontainer:
-        #     Thread(target=self._item.get_image_manipulations, kwargs={'use_winprops': True}).start()
-
-        # Allow early exit if the skin only needs image manipulations
-        # if get_condvisibility("!Skin.HasSetting(TMDbHelper.Service)"):
-        #     return self.get_property('IsUpdating', clear_property=True)
-
         # Get item details
         uncached_func = self._clearfunc_lc if self._listcontainer else self._clearfunc_wp
         self._item.get_itemdetails(**uncached_func)
@@ -428,30 +410,19 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
         self.add_item_listcontainer(self._last_listitem, _id_dialog, _id_d_list)
 
     def on_scroll(self):
-        self.setup_current_container()
-        if self.is_same_item():
-            return
-        # if self._listcontainer:
+        return
+        # self.setup_current_container()
+        # if self.is_same_item():
+        #     return
+        # if self._readahead_li:
         #     return self.on_listitem()
-        if self._readahead_li:
-            return self.on_listitem()
-        # return self.on_exit(keep_tv_details=True)
 
-    def on_exit(self, keep_tv_details=False, is_done=True):
+    def on_exit(self, is_done=True):
 
         if self._listcontainer:
             self.add_item_listcontainer(ListItem().get_listitem())
 
-        ignore_keys = set()
-
-        try:
-            if keep_tv_details and self._item._dbtype in ['episodes', 'seasons']:
-                ignore_keys.update(SETMAIN_ARTWORK)
-                ignore_keys.update(SETPROP_RATINGS)
-        except AttributeError:
-            ignore_keys = set()
-
-        self.clear_properties(ignore_keys=ignore_keys)
+        self.clear_properties()
 
         if is_done:
             self.get_property('IsUpdating', clear_property=True)
