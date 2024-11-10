@@ -4,8 +4,8 @@ import xbmcvfs
 import colorsys
 import hashlib
 from xbmc import getCacheThumbName, skinHasImage, Monitor, sleep
-from jurialmunkey.window import get_property
 from tmdbhelper.lib.addon.plugin import get_infolabel, get_setting, get_condvisibility, ADDONDATA
+from tmdbhelper.lib.monitor.propertysetter import PropertySetter
 from jurialmunkey.parser import try_int, try_float
 from tmdbhelper.lib.files.futils import make_path
 from threading import Thread
@@ -122,7 +122,7 @@ def _saveimage(image, targetfile):
         # os.fsync(f)
 
 
-class ImageFunctions(Thread):
+class ImageFunctions(Thread, PropertySetter):
     save_path = f"{get_setting('image_location', 'str') or ADDONDATA}{{}}/"
     blur_size = try_int(get_infolabel('Skin.String(TMDbHelper.Blur.Size)')) or 480
     crop_size = (800, 310)
@@ -163,11 +163,11 @@ class ImageFunctions(Thread):
 
     def set_properties(self, output):
         if not output:
-            get_property(self.save_prop, clear_property=True)
-            get_property(f'{self.save_prop}.Original', clear_property=True) if self.save_orig else None
+            self.get_property(self.save_prop, clear_property=True)
+            self.get_property(f'{self.save_prop}.Original', clear_property=True) if self.save_orig else None
             return
-        get_property(self.save_prop, output)
-        get_property(f'{self.save_prop}.Original', self.image) if self.save_orig else None
+        self.get_property(self.save_prop, output)
+        self.get_property(f'{self.save_prop}.Original', self.image) if self.save_orig else None
 
     def clamp(self, x):
         return max(0, min(x, 255))
@@ -288,16 +288,16 @@ class ImageFunctions(Thread):
         val_b = rgb_a[2]
 
         for i in range(steps):
-            if get_property(checkprop) != start_hex:
+            if self.get_property(checkprop) != start_hex:
                 return
             hex_value = self.rgb_to_hex(val_r, val_g, val_b)
-            get_property(propname, set_property=hex_value)
+            self.get_property(propname, set_property=hex_value)
             val_r = val_r + inc_r
             val_g = val_g + inc_g
             val_b = val_b + inc_b
             Monitor().waitForAbort(0.05)
 
-        get_property(propname, set_property=end_hex)
+        self.get_property(propname, set_property=end_hex)
         return end_hex
 
     @lazyimport_pil
@@ -322,22 +322,22 @@ class ImageFunctions(Thread):
 
             maincolor_propname = self.save_prop + '.Main'
             maincolor_propchek = self.save_prop + '.MainCheck'
-            maincolor_propvalu = get_property(maincolor_propname)
+            maincolor_propvalu = self.get_property(maincolor_propname)
             if not maincolor_propvalu:
-                get_property(maincolor_propname, set_property=maincolor_hex)
+                self.get_property(maincolor_propname, set_property=maincolor_hex)
             else:
-                get_property(maincolor_propchek, set_property=maincolor_propvalu)
+                self.get_property(maincolor_propchek, set_property=maincolor_propvalu)
                 thread_maincolor = Thread(target=self.set_prop_colorgradient, args=[
                     maincolor_propname, maincolor_propvalu, maincolor_hex, maincolor_propchek])
                 thread_maincolor.start()
 
             compcolor_propname = self.save_prop + '.Comp'
             compcolor_propchek = self.save_prop + '.CompCheck'
-            compcolor_propvalu = get_property(compcolor_propname)
+            compcolor_propvalu = self.get_property(compcolor_propname)
             if not compcolor_propvalu:
-                get_property(compcolor_propname, set_property=compcolor_hex)
+                self.get_property(compcolor_propname, set_property=compcolor_hex)
             else:
-                get_property(compcolor_propchek, set_property=compcolor_propvalu)
+                self.get_property(compcolor_propchek, set_property=compcolor_propvalu)
                 thread_compcolor = Thread(target=self.set_prop_colorgradient, args=[
                     compcolor_propname, compcolor_propvalu, compcolor_hex, compcolor_propchek])
                 thread_compcolor.start()
@@ -350,7 +350,7 @@ class ImageFunctions(Thread):
             return ''
 
 
-class ImageManipulations():
+class ImageManipulations(PropertySetter):
     def get_infolabel(self, info):
         return get_infolabel(f'ListItem.{info}')
 
@@ -415,24 +415,24 @@ class ImageManipulations():
             {'method': 'blur',
                 'active': lambda: get_condvisibility("Skin.HasSetting(TMDbHelper.EnableBlur)"),
                 'images': lambda: self.get_artwork(
-                    source=get_property('Blur.SourceImage'),
+                    source=self.get_property('Blur.SourceImage'),
                     build_fallback=True,
                     built_artwork=built_artwork)
-                or get_property('Blur.Fallback')},
+                or self.get_property('Blur.Fallback')},
             {'method': 'desaturate',
                 'active': lambda: get_condvisibility("Skin.HasSetting(TMDbHelper.EnableDesaturate)"),
                 'images': lambda: self.get_artwork(
-                    source=get_property('Desaturate.SourceImage'),
+                    source=self.get_property('Desaturate.SourceImage'),
                     build_fallback=True,
                     built_artwork=built_artwork)
-                or get_property('Desaturate.Fallback')},
+                or self.get_property('Desaturate.Fallback')},
             {'method': 'colors',
                 'active': lambda: get_condvisibility("Skin.HasSetting(TMDbHelper.EnableColors)"),
                 'images': lambda: self.get_artwork(
-                    source=get_property('Colors.SourceImage'),
+                    source=self.get_property('Colors.SourceImage'),
                     build_fallback=True,
                     built_artwork=built_artwork)
-                or get_property('Colors.Fallback')},)
+                or self.get_property('Colors.Fallback')},)
 
         for i in _manipulations:
             if not i['active']():

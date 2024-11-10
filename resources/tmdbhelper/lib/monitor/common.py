@@ -1,10 +1,10 @@
-from jurialmunkey.window import get_property
 from tmdbhelper.lib.addon.plugin import get_infolabel, get_condvisibility
 from tmdbhelper.lib.addon.tmdate import convert_timestamp, get_region_date
 from tmdbhelper.lib.addon.logger import kodi_try_except, kodi_log
 from tmdbhelper.lib.files.futils import validate_join
 from tmdbhelper.lib.api.kodi.rpc import get_person_stats
 from tmdbhelper.lib.api.contains import CommonContainerAPIs
+from tmdbhelper.lib.monitor.propertysetter import PropertySetter
 from jurialmunkey.parser import try_int
 import xbmcvfs
 import json
@@ -219,7 +219,7 @@ class CommonMonitorDetails(CommonContainerAPIs):
         return item
 
 
-class CommonMonitorFunctions(CommonMonitorDetails):
+class CommonMonitorFunctions(PropertySetter, CommonMonitorDetails):
     def __init__(self):
         self.properties = set()
         self.index_properties = set()
@@ -228,14 +228,14 @@ class CommonMonitorFunctions(CommonMonitorDetails):
 
     def clear_property(self, key):
         key = f'{self.property_prefix}.{key}'
-        get_property(key, clear_property=True)
+        self.get_property(key, clear_property=True)
 
     def set_property(self, key, value):
         key = f'{self.property_prefix}.{key}'
         if value is None:
-            get_property(key, clear_property=True)
+            self.get_property(key, clear_property=True)
             return
-        get_property(key, set_property=f'{value}')
+        self.get_property(key, set_property=f'{value}')
 
     @kodi_try_except('lib.monitor.common set_iter_properties')
     def set_iter_properties(self, dictionary: dict, keys: set, property_object=None):
@@ -251,6 +251,8 @@ class CommonMonitorFunctions(CommonMonitorDetails):
 
         for k in keys:
             v = dictionary.get(k)
+            if v is None:
+                continue
             if isinstance(v, list):
                 v = ' / '.join(v)
             self.properties.add(k)
@@ -262,19 +264,20 @@ class CommonMonitorFunctions(CommonMonitorDetails):
         if not isinstance(dictionary, dict):
             return
 
-        # Convert dictionary to list of keys to avoid iteration size change errors
-        keys = (
-            k for k in list(dictionary)
-            if k not in self.properties
-            and k not in SETPROP_RATINGS
-            and k not in SETMAIN_ARTWORK)
-
         index_properties = set()
 
-        for k in keys:
-            v = dictionary.get(k)
-            self.set_property(k, v)
-            index_properties.add(k)
+        if get_condvisibility("!Skin.HasSetting(TMDbHelper.DisableExtendedProperties) | !String.IsEmpty(Window.Property(TMDbHelper.EnableExtendedProperties))"):
+            # Convert dictionary to list of keys to avoid iteration size change errors
+            keys = (
+                k for k in list(dictionary)
+                if k not in self.properties
+                and k not in SETPROP_RATINGS
+                and k not in SETMAIN_ARTWORK)
+
+            for k in keys:
+                v = dictionary.get(k)
+                self.set_property(k, v)
+                index_properties.add(k)
 
         for k in (self.index_properties - index_properties):
             self.clear_property(k)
@@ -311,18 +314,17 @@ class CommonMonitorFunctions(CommonMonitorDetails):
         self.set_property('Premiered_Custom', date_obj.strftime(get_infolabel('Skin.String(TMDbHelper.Date.Format)') or '%d %b %Y'))
         self.properties.update(['Premiered', 'Premiered_Long', 'Premiered_Custom'])
 
-    def set_properties(self, item):
+    def set_properties(self, item, baseitem_properties=None):
         cast = item.get('cast', [])
         infolabels = item.get('infolabels', {})
         infoproperties = item.get('infoproperties', {})
+        baseitem_properties = baseitem_properties or set()
         self.set_iter_properties(item, SETMAIN)
         self.set_iter_properties(infolabels, SETINFO)
-        self.set_iter_properties(infoproperties, SETPROP)
+        self.set_iter_properties(infoproperties, SETPROP.union(baseitem_properties))
         self.set_time_properties(infolabels.get('duration', 0))
         self.set_date_properties(infolabels.get('premiered'))
         self.set_list_properties(cast, 'name', 'cast')
-        if get_condvisibility("Skin.HasSetting(TMDbHelper.DisableExtendedProperties)"):
-            return
         self.set_indexed_properties(infoproperties)
 
     def clear_properties(self, ignore_keys=None):

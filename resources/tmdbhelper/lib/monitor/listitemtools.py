@@ -244,7 +244,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
             _detailed['ratings'] = _ratings
 
         def _process_artwork_ratings():
-            get_property('IsUpdatingRatings', 'True')
+            self.get_property('IsUpdatingRatings', 'True')
 
             # Thread ratings and artwork processing
             t_artwork = Thread(target=_process_artwork) if process_artwork else None
@@ -256,7 +256,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
             t_artwork.join() if t_artwork else None
             t_ratings.join() if t_ratings else None
 
-            get_property('IsUpdatingRatings', clear_property=True)
+            self.get_property('IsUpdatingRatings', clear_property=True)
 
             # Check focused item is still the same before updating
             if _pre_item != self.cur_item:
@@ -302,7 +302,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
                 self.clear_property_list(SETPROP_RATINGS.difference(_ratings_properties))
 
         def _process_artwork_ratings():
-            get_property('IsUpdatingRatings', 'True')
+            self.get_property('IsUpdatingRatings', 'True')
 
             # Thread ratings and artwork processing
             t_artwork = Thread(target=_process_artwork) if process_artwork else None
@@ -314,7 +314,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
             t_artwork.join() if t_artwork else None
             t_ratings.join() if t_ratings else None
 
-            get_property('IsUpdatingRatings', clear_property=True)
+            self.get_property('IsUpdatingRatings', clear_property=True)
 
         if process_artwork or process_ratings:
             t = Thread(target=_process_artwork_ratings)
@@ -325,7 +325,11 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
         self.properties = set()
 
         # Set our properties
-        self.set_properties(_item._itemdetails.listitem)
+        self.set_properties(_item._itemdetails.listitem, self.baseitem_properties)
+
+        # from tmdbhelper.lib.addon.logger import kodi_log
+        # kodi_log(f'set {len(self.properties)} & {len(self.index_properties)} properties for {self.properties}', 1)
+
         ignore_keys = prev_properties.intersection(self.properties)
         ignore_keys.update(SETPROP_RATINGS)
         ignore_keys.update(SETMAIN_ARTWORK)
@@ -337,7 +341,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
         func(
             process_artwork=get_condvisibility("!Skin.HasSetting(TMDbHelper.DisableArtwork)"),
             process_ratings=get_condvisibility("!Skin.HasSetting(TMDbHelper.DisableRatings)"))
-        get_property('IsUpdating', clear_property=True)
+        self.get_property('IsUpdating', clear_property=True)
 
     def on_readahead(self):
         # No readahead if disabled by user
@@ -381,7 +385,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
             return self.on_exit()
 
         # Set a property for skins to check if item details are updating
-        get_property('IsUpdating', 'True')
+        self.get_property('IsUpdating', 'True')
 
         # Clear properties for clean slate if user opened a new directory and using window properties
         # if not self._listcontainer and not self.is_same_folder(update=True):
@@ -396,7 +400,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
 
         # Allow early exit if the skin only needs image manipulations
         # if get_condvisibility("!Skin.HasSetting(TMDbHelper.Service)"):
-        #     return get_property('IsUpdating', clear_property=True)
+        #     return self.get_property('IsUpdating', clear_property=True)
 
         # Get item details
         uncached_func = self._clearfunc_lc if self._listcontainer else self._clearfunc_wp
@@ -450,4 +454,4 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
         self.clear_properties(ignore_keys=ignore_keys)
 
         if is_done:
-            get_property('IsUpdating', clear_property=True)
+            self.get_property('IsUpdating', clear_property=True)
