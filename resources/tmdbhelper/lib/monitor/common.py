@@ -37,7 +37,7 @@ SETPROP_RATINGS = {
     'mtv_awards_won', 'criticschoice_awards_won', 'emmy_awards_won', 'sag_awards_won', 'bafta_awards_won',
     'total_awards_nominated', 'awards_nominated', 'awards_nominated_cr', 'academy_awards_nominated',
     'goldenglobe_awards_nominated', 'mtv_awards_nominated', 'criticschoice_awards_nominated',
-    'emmy_awards_nominated', 'sag_awards_nominated', 'bafta_awards_nominated', 'status',
+    'emmy_awards_nominated', 'sag_awards_nominated', 'bafta_awards_nominated', 'status', 'episode_type',
     'next_aired', 'next_aired.long', 'next_aired.short', 'next_aired.day', 'next_aired.day_short', 'next_aired.year', 'next_aired.episode',
     'next_aired.name', 'next_aired.tmdb_id', 'next_aired.plot', 'next_aired.season', 'next_aired.rating', 'next_aired.votes', 'next_aired.thumb',
     'next_aired.original', 'next_aired.days_from_aired', 'next_aired.days_until_aired', 'next_aired.original', 'next_aired.custom',
