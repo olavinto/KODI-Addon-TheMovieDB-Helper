@@ -5,7 +5,7 @@ from tmdbhelper.lib.monitor.cronjob import CronJobMonitor
 from tmdbhelper.lib.monitor.player import PlayerMonitor
 from tmdbhelper.lib.monitor.update import UpdateMonitor
 from tmdbhelper.lib.monitor.imgmon import ImagesMonitor
-from tmdbhelper.lib.monitor.poller import Poller
+from tmdbhelper.lib.monitor.poller import Poller, POLL_MIN_INCREMENT, POLL_MID_INCREMENT
 from threading import Thread
 
 
@@ -35,11 +35,11 @@ class ServiceMonitor(Poller):
 
     def _on_listitem(self):
         self.listitem_funcs.on_listitem()
-        self._on_idle(0.2)
+        self._on_idle(POLL_MIN_INCREMENT)
 
     def _on_scroll(self):
         self.listitem_funcs.on_scroll()
-        self._on_idle(0.2)
+        self._on_idle(POLL_MIN_INCREMENT)
 
     def _on_player(self):
         if self.player_monitor.isPlayingVideo():
@@ -47,7 +47,7 @@ class ServiceMonitor(Poller):
 
     def _on_context(self):
         self.listitem_funcs.on_context_listitem()
-        self._on_idle(1)
+        self._on_idle(POLL_MID_INCREMENT)
 
     def _on_clear(self):
         """
@@ -56,7 +56,7 @@ class ServiceMonitor(Poller):
         """
         if self.listitem_funcs.properties or self.listitem_funcs.index_properties:
             return self.listitem_funcs.clear_properties()
-        self._on_idle(1)
+        self._on_idle(POLL_MID_INCREMENT)
 
     def _on_exit(self):
         self.cron_job.exit = True

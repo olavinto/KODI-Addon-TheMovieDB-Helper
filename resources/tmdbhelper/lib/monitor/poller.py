@@ -2,7 +2,12 @@ from tmdbhelper.lib.addon.plugin import get_condvisibility
 from jurialmunkey.window import get_property
 
 
-ON_SERVICE_ENABLED = (
+POLL_MIN_INCREMENT = 0.2
+POLL_MID_INCREMENT = 1
+POLL_MAX_INCREMENT = 2
+
+
+ON_DISABLED = (
     "!Skin.HasSetting(TMDbHelper.Service) + "
     "!Skin.HasSetting(TMDbHelper.EnableBlur) + "
     "!Skin.HasSetting(TMDbHelper.EnableDesaturate) + "
@@ -57,19 +62,19 @@ class Poller():
         self.update_monitor.waitForAbort(wait_time)
 
     def _on_modal(self):
-        self._on_idle(1)
+        self._on_idle(POLL_MID_INCREMENT)
 
     def _on_context(self):
-        self._on_idle(1)
+        self._on_idle(POLL_MID_INCREMENT)
 
     def _on_scroll(self):
-        self._on_idle(0.2)
+        self._on_idle(POLL_MIN_INCREMENT)
 
     def _on_listitem(self):
-        self._on_idle(0.2)
+        self._on_idle(POLL_MIN_INCREMENT)
 
     def _on_clear(self):
-        self._on_idle(0.2)
+        self._on_idle(POLL_MIN_INCREMENT)
 
     def _on_exit(self):
         return
@@ -81,7 +86,7 @@ class Poller():
         self._on_player()
         if get_condvisibility(ON_FULLSCREEN_LISTITEM):
             return self._on_listitem()
-        self._on_idle(1)
+        self._on_idle(POLL_MID_INCREMENT)
 
     def poller(self):
         while not self.update_monitor.abortRequested() and not self.exit:
@@ -93,12 +98,12 @@ class Poller():
                 self._on_fullscreen()
 
             # Sit idle in a holding pattern if the skin doesn't need the service monitor yet
-            elif get_condvisibility(ON_SERVICE_ENABLED):
+            elif get_condvisibility(ON_DISABLED):
                 self._on_idle(30)
 
             # Sit idle in a holding pattern if screen saver is active
             elif get_condvisibility(ON_SCREENSAVER):
-                self._on_idle(2)
+                self._on_idle(POLL_MAX_INCREMENT)
 
             # skip when modal or busy dialogs are opened (e.g. select / progress / busy etc.)
             elif get_condvisibility(ON_MODAL):
