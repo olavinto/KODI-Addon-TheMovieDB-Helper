@@ -65,7 +65,7 @@ class ListItemInfoGetter():
 
 
 class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
-    def __init__(self):
+    def __init__(self, parent):
         super(ListItemMonitorFunctions, self).__init__()
         self._cur_item = 0
         self._pre_item = 1
@@ -85,6 +85,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
         self._readahead_li = get_setting('service_listitem_readahead')  # Allows readahead queue of next ListItems when idle
         self._pre_artwork_thread = None
         self._baseitem_skindefaults = BaseItemSkinDefaults()
+        self._parent = parent
 
     # ==========
     # PROPERTIES
@@ -260,7 +261,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
             if _pre_item != self.cur_item:
                 return
 
-            self.images_monitor.pre_item = _pre_item
+            self._parent.images_monitor.pre_item = _pre_item
 
             _listitem.setArt(_detailed['artwork'] or {}) if process_artwork else None
             _listitem.setProperties(_detailed['ratings'] or {}) if process_ratings else None
@@ -281,8 +282,11 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
             _artwork = _item.get_builtartwork()
             _artwork.update(_item.get_image_manipulations(built_artwork=_artwork, use_winprops=False))
             _artwork_properties = set()
-            if self.is_same_item():
-                self.images_monitor.pre_item = self._cur_item
+
+            with self._parent.mutex_lock:
+                if not self.is_same_item():
+                    return
+                self._parent.images_monitor.pre_item = self._cur_item
                 self.set_iter_properties(_artwork, SETMAIN_ARTWORK, property_object=_artwork_properties)
                 self.clear_property_list(SETMAIN_ARTWORK.difference(_artwork_properties))
 
@@ -290,7 +294,10 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
         def _process_ratings():
             _details = _item.get_all_ratings() or {}
             _ratings_properties = set()
-            if self.is_same_item():
+
+            with self._parent.mutex_lock:
+                if not self.is_same_item():
+                    return
                 self.set_iter_properties(_details.get('infoproperties', {}), SETPROP_RATINGS, property_object=_ratings_properties)
                 self.clear_property_list(SETPROP_RATINGS.difference(_ratings_properties))
 
@@ -313,18 +320,19 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
             t = Thread(target=_process_artwork_ratings)
             t.start()
 
-        # Copy previous properties for clearing intersection
-        prev_properties = self.properties.copy()
-        self.properties = set()
+        with self._parent.mutex_lock:
+            # Copy previous properties for clearing intersection
+            prev_properties = self.properties.copy()
+            self.properties = set()
 
-        # Set our properties
-        self.set_properties(_item._itemdetails.listitem, self.baseitem_properties)
+            # Set our properties
+            self.set_properties(_item._itemdetails.listitem, self.baseitem_properties)
 
-        ignore_keys = prev_properties.intersection(self.properties)
-        ignore_keys.update(SETPROP_RATINGS)
-        ignore_keys.update(SETMAIN_ARTWORK)
-        for k in prev_properties - ignore_keys:
-            self.clear_property(k)
+            ignore_keys = prev_properties.intersection(self.properties)
+            ignore_keys.update(SETPROP_RATINGS)
+            ignore_keys.update(SETMAIN_ARTWORK)
+            for k in prev_properties - ignore_keys:
+                self.clear_property(k)
 
     def on_finalise(self):
         func = self.on_finalise_listcontainer if self._listcontainer else self.on_finalise_winproperties

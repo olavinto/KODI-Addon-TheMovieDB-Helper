@@ -8,11 +8,11 @@ class CronJobMonitor(Thread):
 
     _poll_time = CRONJOB_POLL_TIME
 
-    def __init__(self, update_monitor, update_hour=0):
+    def __init__(self, parent, update_hour=0):
         Thread.__init__(self)
         self.exit = False
         self.update_hour = update_hour
-        self.update_monitor = update_monitor
+        self.update_monitor = parent.update_monitor
 
     def _on_startup(self):
         self._do_delete_old_databases()

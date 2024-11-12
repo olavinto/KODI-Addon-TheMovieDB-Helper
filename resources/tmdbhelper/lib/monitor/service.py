@@ -6,7 +6,7 @@ from tmdbhelper.lib.monitor.player import PlayerMonitor
 from tmdbhelper.lib.monitor.update import UpdateMonitor
 from tmdbhelper.lib.monitor.imgmon import ImagesMonitor
 from tmdbhelper.lib.monitor.poller import Poller, POLL_MIN_INCREMENT, POLL_MID_INCREMENT
-from threading import Thread
+from threading import Thread, Lock
 
 
 class ServiceMonitor(Poller):
@@ -15,19 +15,20 @@ class ServiceMonitor(Poller):
         self.listitem = None
 
     def run(self):
+        self.mutex_lock = Lock()
+
         self.update_monitor = UpdateMonitor()
         self.player_monitor = PlayerMonitor()
 
-        self.cron_job = CronJobMonitor(self.update_monitor, update_hour=get_setting('library_autoupdate_hour', 'int'))
+        self.cron_job = CronJobMonitor(self, update_hour=get_setting('library_autoupdate_hour', 'int'))
         self.cron_job.setName('Cron Thread')
         self.cron_job.start()
 
-        self.images_monitor = ImagesMonitor(self.update_monitor)
+        self.images_monitor = ImagesMonitor(self)
         self.images_monitor.setName('Image Thread')
         self.images_monitor.start()
 
-        self.listitem_funcs = ListItemMonitorFunctions()
-        self.listitem_funcs.images_monitor = self.images_monitor
+        self.listitem_funcs = ListItemMonitorFunctions(self)
 
         get_property('ServiceStarted', 'True')
 

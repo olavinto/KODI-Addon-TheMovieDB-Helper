@@ -6,24 +6,26 @@ from threading import Thread
 
 
 class ImagesMonitor(Thread, ListItemInfoGetter, ImageManipulations, Poller):
-    def __init__(self, update_monitor):
+    def __init__(self, parent):
         Thread.__init__(self)
         self.exit = False
-        self.update_monitor = update_monitor
+        self.update_monitor = parent.update_monitor
         self.crop_image_cur = None
         self.blur_image_cur = None
         self.pre_item = None
         self._readahead_li = True  # get_setting('service_listitem_readahead')  # Allows readahead queue of next ListItems when idle
+        self._parent = parent
 
     def setup_current_container(self):
         self._container_item = self.container_item
 
     @kodi_try_except('lib.monitor.imgmon.on_listitem')
     def on_listitem(self):
-        self.setup_current_container()
-        if self.pre_item != self.cur_item:
-            self.get_image_manipulations(use_winprops=True)
-            self.pre_item = self.cur_item
+        with self._parent.mutex_lock:
+            self.setup_current_container()
+            if self.pre_item != self.cur_item:
+                self.get_image_manipulations(use_winprops=True)
+                self.pre_item = self.cur_item
 
     def _on_listitem(self):
         self.on_listitem()
