@@ -16,6 +16,17 @@ ON_DISABLED = (
 ON_MODAL = (
     "["
     "Window.IsVisible(DialogSelect.xml) | "
+    "Window.IsVisible(DialogKeyboard.xml) | "
+    "Window.IsVisible(DialogNumeric.xml) | "
+    "Window.IsVisible(DialogConfirm.xml) | "
+    "Window.IsVisible(DialogSettings.xml) | "
+    "Window.IsVisible(DialogMediaSource.xml) | "
+    "Window.IsVisible(DialogTextViewer.xml) | "
+    "Window.IsVisible(DialogSlider.xml) | "
+    "Window.IsVisible(DialogSubtitles.xml) | "
+    "Window.IsVisible(DialogFavourites.xml) | "
+    "Window.IsVisible(DialogColorPicker.xml) | "
+    "Window.IsVisible(FileBrowser.xml) | "
     "Window.IsVisible(progressdialog) | "
     "Window.IsVisible(busydialog) | "
     "Window.IsVisible(shutdownmenu) | "
@@ -27,7 +38,6 @@ ON_INFODIALOG = (
     "Window.IsVisible(movieinformation) | "
     "Window.IsVisible(musicinformation) | "
     "Window.IsVisible(songinformation) | "
-    "Window.IsVisible(addoninformation) | "
     "Window.IsVisible(pvrguideinfo) | "
     "Window.IsVisible(tvchannels) | "
     "Window.IsVisible(tvguide)"
@@ -50,6 +60,10 @@ ON_SCROLL = "Container.Scrolling"
 
 ON_CONTEXT = (
     "Window.IsVisible(contextmenu) | "
+    "Window.IsVisible(DialogVideoManager.xml) | "
+    "Window.IsVisible(DialogAddonSettings.xml) | "
+    "Window.IsVisible(DialogAddonInfo.xml) | "
+    "Window.IsVisible(DialogPictureInfo.xml) | "
     "!String.IsEmpty(Window.Property(TMDbHelper.ContextMenu))")
 
 ON_SCREENSAVER = "System.ScreenSaverActive"
