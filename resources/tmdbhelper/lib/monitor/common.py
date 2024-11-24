@@ -233,7 +233,7 @@ class CommonMonitorFunctions(PropertySetter, CommonMonitorDetails):
         self.properties = set()
         self.index_properties = set()
         self.property_prefix = 'ListItem'
-        super(CommonMonitorFunctions, self).__init__()
+        super().__init__()
 
     def clear_property(self, key):
         key = f'{self.property_prefix}.{key}'
