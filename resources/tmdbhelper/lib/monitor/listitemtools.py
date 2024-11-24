@@ -119,7 +119,7 @@ class ListItemMonitorFunctions(CommonMonitorFunctions, ListItemInfoGetter):
         self.property_prefix = 'ListItem'
         self._clearfunc_wp = {'func': None}
         self._clearfunc_lc = {'func': None}
-        self._readahead_li = get_setting('service_listitem_readahead')  # Allows readahead queue of next ListItems when idle
+        self._readahead_li = get_setting('service_listitem_read_ahead')  # Allows readahead queue of next ListItems when idle
         self._pre_artwork_thread = None
         self._baseitem_skindefaults = BaseItemSkinDefaults()
         self._parent = parent

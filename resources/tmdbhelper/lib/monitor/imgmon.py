@@ -16,7 +16,7 @@ class ImagesMonitor(Thread, ListItemInfoGetter, ImageManipulations, Poller):
         self.update_monitor = parent.update_monitor
         self.crop_image_cur = None
         self.blur_image_cur = None
-        self._readahead_li = True  # get_setting('service_listitem_readahead')  # Allows readahead queue of next ListItems when idle
+        self._allow_on_scroll = True  # Allow updating while scrolling
         self._parent = parent
 
     @kodi_try_except('lib.monitor.imgmon.on_listitem')
@@ -32,7 +32,7 @@ class ImagesMonitor(Thread, ListItemInfoGetter, ImageManipulations, Poller):
         self._on_idle(POLL_MIN_INCREMENT)
 
     def _on_scroll(self):
-        if self._readahead_li:
+        if self._allow_on_scroll:
             return self._on_listitem()
         self._on_idle(POLL_MIN_INCREMENT)
 
