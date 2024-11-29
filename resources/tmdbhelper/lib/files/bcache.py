@@ -16,3 +16,7 @@ class BasicCache(jurialmunkey.bcache.BasicCache):
 
 class BasicCacheMem(BasicCache):
     _simplecache = SimpleCacheMem
+
+
+class BasicCacheServiceMem(BasicCacheMem):
+    _queue_limit = 20
