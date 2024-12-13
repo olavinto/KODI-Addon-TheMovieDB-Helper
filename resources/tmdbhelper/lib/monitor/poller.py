@@ -9,6 +9,7 @@ POLL_MAX_INCREMENT = 2
 
 ON_DISABLED = (
     "!Skin.HasSetting(TMDbHelper.Service) + "
+    "!Skin.HasSetting(TMDbHelper.EnableCrop) + "
     "!Skin.HasSetting(TMDbHelper.EnableBlur) + "
     "!Skin.HasSetting(TMDbHelper.EnableDesaturate) + "
     "!Skin.HasSetting(TMDbHelper.EnableColors)")
@@ -72,6 +73,8 @@ ON_FULLSCREEN = "Window.IsVisible(fullscreenvideo)"
 
 
 class Poller():
+    _cond_on_disabled = ON_DISABLED
+
     def _on_idle(self, wait_time=30):
         self.update_monitor.waitForAbort(wait_time)
 
@@ -112,7 +115,7 @@ class Poller():
                 self._on_fullscreen()
 
             # Sit idle in a holding pattern if the skin doesn't need the service monitor yet
-            elif get_condvisibility(ON_DISABLED):
+            elif get_condvisibility(self._cond_on_disabled):
                 self._on_idle(30)
 
             # Sit idle in a holding pattern if screen saver is active

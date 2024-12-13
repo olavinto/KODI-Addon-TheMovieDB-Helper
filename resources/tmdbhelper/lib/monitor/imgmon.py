@@ -6,6 +6,12 @@ from threading import Thread
 
 
 class ImagesMonitor(Thread, ListItemInfoGetter, ImageManipulations, Poller):
+    _cond_on_disabled = (
+        "!Skin.HasSetting(TMDbHelper.EnableCrop) + "
+        "!Skin.HasSetting(TMDbHelper.EnableBlur) + "
+        "!Skin.HasSetting(TMDbHelper.EnableDesaturate) + "
+        "!Skin.HasSetting(TMDbHelper.EnableColors)")
+
     def __init__(self, parent):
         Thread.__init__(self)
         self._cur_item = 0
